@@ -24,6 +24,9 @@ def newWhitelist():
             sstore(sender, count)
             log(type=WhitelistCreated, sender, count)
             
+def getWhitelistCount():
+    return(sload(0):uint256)
+            
 event OwnerChanged(old:indexed, new:indexed, ID:indexed)
 def changeOwner(whitelistID:uint256, newOwner:address):
     with sender = msg.sender:
@@ -33,6 +36,9 @@ def changeOwner(whitelistID:uint256, newOwner:address):
             sstore(whitelistID, newOwner)
             log(type=OwnerChanged, sender, newOwner, whitelistID)
             
+def getOwner(whitelistID:uint256):
+    return(sload(whitelistID):address)
+            
 event DefaultChanged(owner:indexed, newDefault:indexed)
 def changeDefault(newDefaultID:uint256):
     with sender = msg.sender:
@@ -41,3 +47,29 @@ def changeDefault(newDefaultID:uint256):
                 HARDFAIL()
             sstore(sender, newDefaultID)
             log(type=DefaultChanged, sender, newDefaultID)
+
+def getDefaultWhitelist(owner:address):
+    return(sload(owner):uint256)
+    
+event AddressAdded(ID:indexed, address:indexed)
+def addAddress(whitelistID:uint256, newAddress:address):
+    with sender = msg.sender:
+        if whitelistID == 0:
+            whitelistID = sload(sender)
+        if sload(whitelistID) != sender:
+            HARDFAIL()
+        with key = 0:
+            with temp = alloc(64):
+                temp[0] = whitelistID
+                temp[1] = address
+                key = sha3(temp, items=2)
+            sstore(key, address)
+            log(type=AddressAdded, whitelistID, newAddress)
+            
+def checkWhitelist(whitelistID:uint256, address:address):
+    with key = 0:
+        with temp = alloc(64):
+            temp[0] = whitelistID
+            temp[1] = address
+            key = sha3(temp, items=2)
+            return(sload(key):address)
