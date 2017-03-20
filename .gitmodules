@@ -1,0 +1,3 @@
+[submodule "MacroLib"]
+	path = MacroLib
+	url = git@github.com:SerpentChris/MacroLib.git

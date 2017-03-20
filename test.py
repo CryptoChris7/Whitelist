@@ -1,37 +1,81 @@
-import pytest
-import binascii
-from ethereum import tester as t
-from collections import namedtuple
+from serpent_tests import ContractTest, default_accounts
 
-Account = namedtuple('Account', 'address,privkey')
-accounts = [Account(t.a0, t.k0),
-            Account(t.a1, t.k1),
-            Account(t.a2, t.k2),
-            Account(t.a3, t.k3)]
+A0 = default_accounts[0]
+A1 = default_accounts[1]
+A2 = default_accounts[2]
 
 
-def test_whitelist():
-    s = t.state()
-    c = s.abi_contract('whitelist.se')
+class WhitelistTest(ContractTest):
+    source = 'whitelist.se'
 
-    assert c.newWhitelist(sender=accounts[0].privkey) == 1
-    assert c.getWhitelistCount() == 1
-    assert c.getOwner(1) == binascii.hexlify(accounts[0].address)
-    assert c.getDefaultWhitelist(accounts[0].address) == 1
+    def test_newWhitelist(self):
+        self.assertEqual(
+            self.contract.newWhitelist(sender=A0.private_key),
+            1)
 
-    with pytest.raises(t.TransactionFailed):
-        c.changeOwner(1, accounts[1].address, sender=accounts[1].privkey)
-    assert c.changeOwner(1, accounts[1].address, sender=accounts[0].privkey) == 1
-    assert c.getDefaultWhitelist(accounts[0].address) == 0
+    def test_getWhitelistCount(self):
+        self.assertEqual(
+            self.contract.getWhitelistCount(),
+            1)
 
-    
-    with pytest.raises(t.TransactionFailed):
-        c.addAddress(1, accounts[3].address, sender=accounts[0].privkey)
-    assert c.addAddress(1, accounts[2].address, sender=accounts[1].privkey) == 1        
-    assert c.checkWhitelist(1, accounts[2].address) == 1
+    def test_getOwner(self):
+        self.assertEqual(
+            self.contract.getOwner(1),
+            A0.address)
+
+    def test_changeOwner(self):
+        with self.assertTxFail():
+            self.contract.changeOwner(
+                1,
+                A1.address,
+                sender=A1.private_key)
+
+        self.assertTrue(
+            self.contract.changeOwner(
+                1,
+                A1.address,
+                sender=A0.private_key))
+
+    def test_addAddress(self):
+        with self.assertTxFail():
+            self.contract.addAddress(
+                1,
+                A2.address,
+                sender=A0.private_key
+            )
+        self.assertTrue(
+            self.contract.addAddress(
+                1,
+                A2.address,
+                sender=A1.private_key
+            )
+        )
+
+    def test_checkWhitelist(self):
+        self.assertTrue(
+            self.contract.checkWhitelist(
+                1,
+                A2.address))
+        self.assertFalse(
+            self.contract.checkWhitelist(
+                1,
+                A1.address))
+
+    def test_removeAddress(self):
+        with self.assertTxFail():
+            self.contract.removeAddress(
+                1,
+                A2.address,
+                sender=A0.private_key)
+
+        self.assertTrue(
+            self.contract.removeAddress(
+                1,
+                A2.address,
+                sender=A1.private_key))
 
 
-    with pytest.raises(t.TransactionFailed):
-        c.removeAddress(1, accounts[2].address, sender=accounts[0].privkey)
-    assert c.removeAddress(1, accounts[2].address, sender=accounts[1].privkey) == 1
-    assert c.checkWhitelist(1, accounts[2].address, sender=accounts[1].privkey) == 0
+if __name__ == '__main__':
+    WhitelistTest.run_tests()
+
+

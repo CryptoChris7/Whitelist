@@ -1,86 +1,69 @@
 # -*- mode: python -*-
-macro HARDFAIL(): ~jump(0x100000000)
+##### MACROS #####
+inset('MacroLib/common.sem')
+
 macro MAXID: 0x100000000000000000000000
-macro SHIFT160($n): $n*0x1000000000000000000000000000000000000000
 
-
-macro check_sender($id, $sender):
-    unless(~eq(sload($id), $sender), HARDFAIL())
-
+macro check_sender($id):
+    IF_NOT_EQ(sload($id), msg.sender, THROW())
 
 macro check_id_bounds($id):
-    unless(~lt($id, MAXID), HARDFAIL())
-    unless($id, HARDFAIL())
+    IF_ZERO(~lt($id, MAXID), THROW())
+    IF_ZERO($id, THROW())
+
+macro make_key($id, $address):
+    LSHIFT160($id) | $address
 
 
-macro make_key($id, $owner):
-    SHIFT160($id) | $owner
-
-
-event WhitelistCreated(creator:indexed, ID:indexed)
+event WhitelistCreated(ID: indexed, creator: indexed)
 def newWhitelist():
     with sender = msg.sender:
         with count = sload(0) + 1:
             sstore(0, count)
             sstore(count, sender)
-            sstore(sender, count)
-            log(type=WhitelistCreated, sender, count)
-            return(count:uint96)
+            log(type=WhitelistCreated, count, sender)
+            return(count: uint96)
 
 
 def getWhitelistCount():
-    return(sload(0):uint96)
+    return(sload(0): uint96)
 
 
-event OwnerChanged(old:indexed, new:indexed, ID:indexed)
-def changeOwner(whitelistID:uint96, newOwner:address):
-    with sender = msg.sender:
-        check_sender(whitelistID, sender)
-        unless(~xor(sload(sender), whitelistID), sstore(sender, 0))
-        sstore(whitelistID, newOwner)
-        log(type=OwnerChanged, sender, newOwner, whitelistID)
-        return(1:bool)
+event OwnerChanged(ID: indexed, newOwner: indexed, oldOwner: indexed)
+def changeOwner(whitelistID: uint96, newOwner: address):
+    check_id_bounds(whitelistID)
+    check_sender(whitelistID)
+    sstore(whitelistID, newOwner)
+    log(type=OwnerChanged, whitelistID, newOwner, msg.sender)
+    return(True: bool)
 
 
-def getOwner(whitelistID:uint96):
-    return(sload(whitelistID):address)
+def getOwner(whitelistID: uint96):
+    check_id_bounds(whitelistID)
+    return(sload(whitelistID): address)
 
 
-event DefaultChanged(owner:indexed, newDefault:indexed)
-def changeDefault(newDefaultID:uint96):
-    with sender = msg.sender:
-        check_sender(newDefaultID, sender)
-        sstore(sender, newDefaultID)
-        log(type=DefaultChanged, sender, newDefaultID)
-        return(1:bool)
-
-
-def getDefaultWhitelist(owner:address):
-    return(sload(owner):uint96)
-
-
-event AddressAdded(ID:indexed, address:indexed)
-def addAddress(whitelistID:uint96, address:address):
-    with sender = msg.sender:
-        unless(whitelistID, whitelistID = sload(sender))
-        check_sender(whitelistID, sender)
-        with key = make_key(whitelistID, address):
-            sstore(key, 1)
-            log(type=AddressAdded, whitelistID, newAddress)
-            return(1:bool)
-
-
-def checkWhitelist(whitelistID:uint96, address:address):
+event AddressAdded(ID: indexed, address: indexed)
+def addAddress(whitelistID: uint96, address: address):
+    check_id_bounds(whitelistID)
+    check_sender(whitelistID)
     with key = make_key(whitelistID, address):
-        return(sload(key):bool)
+        sstore(key, 1)
+        log(type=AddressAdded, whitelistID, newAddress)
+        return(True: bool)
 
 
-event AddressRemoved(ID:indexed, address:indexed)
-def removeAddress(whitelistID:uint96, address:address):
-    with sender = msg.sender:
-        unless(whitelistID, whitelistID = sload(sender))
-        check_sender(whitelistID, sender)
-        with key = make_key(whitelistID, address):
-            sstore(key, 0)
-            log(type=AddressRemoved, whitelistID, address)
-            return(1:bool)
+def checkWhitelist(whitelistID: uint96, address: address):
+    check_id_bounds(whitelistID)
+    with key = make_key(whitelistID, address):
+        return(sload(key): bool)
+
+
+event AddressRemoved(ID: indexed, address: indexed)
+def removeAddress(whitelistID: uint96, address: address):
+    check_id_bounds(whitelistID)
+    check_sender(whitelistID)
+    with key = make_key(whitelistID, address):
+        sstore(key, 0)
+        log(type=AddressRemoved, whitelistID, address)
+        return(True: bool)
