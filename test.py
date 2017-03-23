@@ -8,14 +8,14 @@ A2 = default_accounts[2]
 class WhitelistTest(ContractTest):
     source = 'whitelist.se'
 
-    def test_newWhitelist(self):
+    def test_create(self):
         self.assertEqual(
-            self.contract.newWhitelist(sender=A0.private_key),
+            self.contract.create(sender=A0.private_key),
             1)
 
-    def test_getWhitelistCount(self):
+    def test_count(self):
         self.assertEqual(
-            self.contract.getWhitelistCount(),
+            self.contract.count(),
             1)
 
     def test_getOwner(self):
@@ -51,13 +51,13 @@ class WhitelistTest(ContractTest):
             )
         )
 
-    def test_checkWhitelist(self):
+    def test_check(self):
         self.assertTrue(
-            self.contract.checkWhitelist(
+            self.contract.check(
                 1,
                 A2.address))
         self.assertFalse(
-            self.contract.checkWhitelist(
+            self.contract.check(
                 1,
                 A1.address))
 
@@ -77,5 +77,3 @@ class WhitelistTest(ContractTest):
 
 if __name__ == '__main__':
     WhitelistTest.run_tests()
-
-

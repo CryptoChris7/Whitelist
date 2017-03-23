@@ -1,5 +1,3 @@
-# -*- mode: python -*-
-##### MACROS #####
 inset('MacroLib/common.sem')
 
 macro MAXID: 0x100000000000000000000000
@@ -15,8 +13,12 @@ macro make_key($id, $address):
     LSHIFT160($id) | $address
 
 
+def any():
+    IF_NOT_ZERO(msg.value, THROW())
+
+
 event WhitelistCreated(ID: indexed, creator: indexed)
-def newWhitelist():
+def create():
     with sender = msg.sender:
         with count = sload(0) + 1:
             sstore(0, count)
@@ -25,7 +27,7 @@ def newWhitelist():
             return(count: uint96)
 
 
-def getWhitelistCount():
+def count():
     return(sload(0): uint96)
 
 
@@ -49,11 +51,11 @@ def addAddress(whitelistID: uint96, address: address):
     check_sender(whitelistID)
     with key = make_key(whitelistID, address):
         sstore(key, 1)
-        log(type=AddressAdded, whitelistID, newAddress)
+        log(type=AddressAdded, whitelistID, address)
         return(True: bool)
 
 
-def checkWhitelist(whitelistID: uint96, address: address):
+def check(whitelistID: uint96, address: address):
     check_id_bounds(whitelistID)
     with key = make_key(whitelistID, address):
         return(sload(key): bool)
